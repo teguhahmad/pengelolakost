@@ -129,101 +129,103 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, onNavigate }) => {
   const unreadNotifications = notifications.filter(n => n.status === 'unread').slice(0, 5);
 
   return (
-    <header className="bg-white shadow-sm h-16 flex items-center fixed top-0 right-0 left-64 z-20 px-4 lg:px-6">
-      <div className="flex-1 flex items-center gap-2 lg:gap-4">
-        <button onClick={onMenuClick} className="lg:hidden text-gray-500 focus:outline-none">
-          <Menu size={24} />
-        </button>
-        
-        <div className="hidden sm:block">
-          <PropertySelector />
+    <header className="fixed top-0 left-0 right-0 bg-white shadow-sm h-16 flex items-center z-20">
+      <div className="w-full max-w-screen-2xl mx-auto px-4 lg:px-6 flex items-center justify-between">
+        <div className="flex items-center gap-2 lg:gap-4">
+          <button onClick={onMenuClick} className="lg:hidden text-gray-500 focus:outline-none">
+            <Menu size={24} />
+          </button>
+          
+          <div className="hidden sm:block">
+            <PropertySelector />
+          </div>
+          
+          <div className="hidden sm:block mx-4 h-6 w-px bg-gray-200" />
+          
+          <h1 className="text-lg lg:text-xl font-semibold text-gray-800 truncate">{title}</h1>
         </div>
         
-        <div className="hidden sm:block mx-4 h-6 w-px bg-gray-200" />
-        
-        <h1 className="text-lg lg:text-xl font-semibold text-gray-800 truncate">{title}</h1>
-      </div>
-      
-      <div className="flex items-center gap-2 lg:gap-4">
-        <button 
-          className="relative text-gray-500 hover:text-gray-700 focus:outline-none p-2"
-          onClick={handleChatClick}
-        >
-          <MessageCircle size={20} />
-          {unreadChats > 0 && (
-            <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-              {unreadChats}
-            </span>
-          )}
-        </button>
-
-        <div className="relative" ref={notificationsRef}>
+        <div className="flex items-center gap-2 lg:gap-4">
           <button 
             className="relative text-gray-500 hover:text-gray-700 focus:outline-none p-2"
-            onClick={() => setShowNotifications(!showNotifications)}
+            onClick={handleChatClick}
           >
-            <Bell size={20} />
-            {unreadCount > 0 && (
+            <MessageCircle size={20} />
+            {unreadChats > 0 && (
               <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
-                {unreadCount}
+                {unreadChats}
               </span>
             )}
           </button>
 
-          {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-2 z-50">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-sm font-semibold text-gray-800">Notifikasi</h3>
-                  {unreadCount > 0 && (
-                    <span className="text-xs font-medium text-red-500">{unreadCount} belum dibaca</span>
-                  )}
+          <div className="relative" ref={notificationsRef}>
+            <button 
+              className="relative text-gray-500 hover:text-gray-700 focus:outline-none p-2"
+              onClick={() => setShowNotifications(!showNotifications)}
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-2 z-50">
+                <div className="px-4 py-2 border-b border-gray-100">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-sm font-semibold text-gray-800">Notifikasi</h3>
+                    {unreadCount > 0 && (
+                      <span className="text-xs font-medium text-red-500">{unreadCount} belum dibaca</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              {unreadNotifications.length > 0 ? (
-                unreadNotifications.map(notification => (
-                  <div 
-                    key={notification.id} 
-                    className="px-4 py-3 hover:bg-gray-50 cursor-pointer bg-blue-50"
-                    onClick={() => markAsRead(notification.id)}
-                  >
-                    <div className="flex items-start gap-2">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 mt-2"></span>
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-800">{notification.title}</p>
-                        <p className="text-xs text-gray-600 mt-1">{notification.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {formatDistanceToNow(new Date(notification.created_at), { 
-                            addSuffix: true,
-                            locale: id 
-                          })}
-                        </p>
+                {unreadNotifications.length > 0 ? (
+                  unreadNotifications.map(notification => (
+                    <div 
+                      key={notification.id} 
+                      className="px-4 py-3 hover:bg-gray-50 cursor-pointer bg-blue-50"
+                      onClick={() => markAsRead(notification.id)}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 mt-2"></span>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-800">{notification.title}</p>
+                          <p className="text-xs text-gray-600 mt-1">{notification.message}</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {formatDistanceToNow(new Date(notification.created_at), { 
+                              addSuffix: true,
+                              locale: id 
+                            })}
+                          </p>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="px-4 py-3 text-sm text-gray-500">
+                    Tidak ada notifikasi baru
                   </div>
-                ))
-              ) : (
-                <div className="px-4 py-3 text-sm text-gray-500">
-                  Tidak ada notifikasi baru
+                )}
+                <div className="px-4 py-2 border-t border-gray-100">
+                  <button 
+                    className="text-sm text-blue-600 hover:text-blue-800"
+                    onClick={handleViewAllNotifications}
+                  >
+                    Lihat semua notifikasi
+                  </button>
                 </div>
-              )}
-              <div className="px-4 py-2 border-t border-gray-100">
-                <button 
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                  onClick={handleViewAllNotifications}
-                >
-                  Lihat semua notifikasi
-                </button>
               </div>
-            </div>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-2 lg:gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
-            {userName.charAt(0).toUpperCase()}
+            )}
           </div>
-          <span className="hidden lg:inline-block text-sm font-medium text-gray-700">{userName}</span>
+          
+          <div className="flex items-center gap-2 lg:gap-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+            <span className="hidden lg:inline-block text-sm font-medium text-gray-700">{userName}</span>
+          </div>
         </div>
       </div>
     </header>
