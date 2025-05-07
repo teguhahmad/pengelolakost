@@ -14,7 +14,6 @@ import Properties from './pages/Properties';
 import MarketplaceSettings from './pages/MarketplaceSettings';
 import { PropertyProvider, useProperty } from './contexts/PropertyContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import MarketplaceButton from './components/ui/TestBillingButton';
 import { supabase } from './lib/supabase';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -206,7 +205,6 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/*" element={<AppContent />} />
           </Routes>
-          <MarketplaceButton />
         </NotificationProvider>
       </PropertyProvider>
     </Router>
