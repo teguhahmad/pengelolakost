@@ -10,7 +10,8 @@ import {
   Bell, 
   LogOut,
   Building2,
-  Store
+  Store,
+  MessageCircle
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
     { id: 'maintenance', label: 'Pemeliharaan', icon: <ClipboardList size={20} /> },
     { id: 'reports', label: 'Laporan', icon: <BarChart size={20} /> },
     { id: 'notifications', label: 'Notifikasi', icon: <Bell size={20} /> },
+    { id: 'chat', label: 'Chat', icon: <MessageCircle size={20} /> },
     { id: 'Marketplace-Settings', label: 'Marketplace', icon: <Store size={20} /> },
     { id: 'settings', label: 'Pengaturan', icon: <Settings size={20} /> }
   ];
