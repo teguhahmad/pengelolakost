@@ -141,8 +141,6 @@ const Header: React.FC<HeaderProps> = ({ title, onMenuClick, onNavigate }) => {
           </div>
           
           <div className="hidden sm:block mx-4 h-6 w-px bg-gray-200" />
-          
-          <h1 className="text-lg lg:text-xl font-semibold text-gray-800 truncate">{title}</h1>
         </div>
         
         <div className="flex items-center gap-2 lg:gap-4">
