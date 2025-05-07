@@ -191,22 +191,13 @@ const Reports: React.FC = () => {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
-        <p className="mt-2 text-gray-600">Loading report data...</p>
-      </div>
-    );
-  }
-
   return (
     <FeatureGuard 
       feature="financial_reports" 
       fallback={
         <div className="p-6 text-center text-gray-500">
-          This feature is not available in your current subscription plan. 
-          Please upgrade to access financial reports.
+          Fitur laporan keuangan tidak tersedia dalam paket langganan Anda saat ini.
+          Silakan tingkatkan paket Anda untuk mengakses laporan keuangan lengkap.
         </div>
       }
     >
