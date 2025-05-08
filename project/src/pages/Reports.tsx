@@ -196,8 +196,8 @@ const Reports: React.FC = () => {
       feature="financial_reports" 
       fallback={
         <div className="p-6 text-center text-gray-500">
-          Fitur laporan keuangan tidak tersedia dalam paket langganan Anda saat ini.
-          Silakan tingkatkan paket Anda untuk mengakses laporan keuangan lengkap.
+          <p>Fitur laporan keuangan tidak tersedia dalam paket langganan Anda saat ini.</p>
+          <p>Silakan tingkatkan paket Anda untuk mengakses laporan keuangan lengkap.</p>
         </div>
       }
     >
