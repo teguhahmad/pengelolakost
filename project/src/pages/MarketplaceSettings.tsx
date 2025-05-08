@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import RoomTypeForm from '../components/rooms/RoomTypeForm';
@@ -580,7 +581,7 @@ const MarketplaceSettings: React.FC = () => {
 
   return (
     <FeatureGuard 
-      feature="marketplace_listing"
+      feature="marketplace_listing" 
       fallback={
         <div className="p-6 text-center text-gray-500">
           Marketplace listing is not available in your current plan.
@@ -589,7 +590,6 @@ const MarketplaceSettings: React.FC = () => {
       }
     >
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Store className="h-8 w-8 text-blue-600" />
@@ -693,7 +693,6 @@ const MarketplaceSettings: React.FC = () => {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <h3 className="text-lg font-medium text-gray-900">{roomType.name}</h3>
-                          <p className="text-sm text-gray-500">{roomType.description}</p>
                         </div>
                         <p className="text-lg font-bold text-blue-600">
                           {new Intl.NumberFormat('id-ID', {
