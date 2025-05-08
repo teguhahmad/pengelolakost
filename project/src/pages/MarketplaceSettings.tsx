@@ -530,6 +530,26 @@ const MarketplaceSettings: React.FC = () => {
           </div>
         )}
 
+        {/* Description */}
+        <Card>
+          <CardHeader>
+            <h2 className="text-lg font-semibold text-gray-800">Deskripsi Kost</h2>
+          </CardHeader>
+          <CardContent>
+            <textarea
+              value={settings.description}
+              onChange={(e) => setSettings(prev => ({ ...prev, description: e.target.value }))}
+              rows={5}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Berikan deskripsi lengkap tentang kost Anda..."
+            />
+            <p className="mt-2 text-sm text-gray-500">
+              Berikan informasi yang lengkap tentang kost Anda, termasuk lokasi strategis, fasilitas umum, 
+              dan hal-hal menarik lainnya yang membuat kost Anda berbeda.
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-800">Tipe Kamar</h2>
@@ -758,6 +778,19 @@ const MarketplaceSettings: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Save Button */}
+        <div className="fixed bottom-6 right-6">
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            className="shadow-lg"
+          >
+            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+          </Button>
+        </div>
       </div>
     </FeatureGuard>
   );
