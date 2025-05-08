@@ -621,8 +621,8 @@ const MarketplaceSettings: React.FC = () => {
       feature="marketplace_listing" 
       fallback={
         <div className="p-6 text-center text-gray-500">
-          Marketplace listing is not available in your current plan.
-          Please upgrade to list your property in the marketplace.
+          <p>Fitur marketplace tidak tersedia dalam paket langganan Anda saat ini.</p>
+          <p>Silakan tingkatkan paket untuk memasukkan properti Anda ke dalam marketplace.</p>
         </div>
       }
     >
