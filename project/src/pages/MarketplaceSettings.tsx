@@ -61,71 +61,6 @@ interface ImageUploadProps {
   onDelete: (url: string) => void;
 }
 
-// Update the handleSaveSettings function to be more specific
-const handleToggleMarketplace = async () => {
-  if (!selectedProperty) return;
-
-  try {
-    setIsSaving(true);
-    setError(null);
-
-    const newEnabled = !settings.marketplace_enabled;
-
-    const { error } = await supabase
-      .from('properties')
-      .update({
-        marketplace_enabled: newEnabled,
-        marketplace_status: newEnabled ? 'published' : 'draft',
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', selectedProperty.id);
-
-    if (error) throw error;
-
-    setSettings(prev => ({
-      ...prev,
-      marketplace_enabled: newEnabled,
-      marketplace_status: newEnabled ? 'published' : 'draft'
-    }));
-
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  } catch (err) {
-    console.error('Error toggling marketplace:', err);
-    setError('Failed to update marketplace status');
-  } finally {
-    setIsSaving(false);
-  }
-};
-
-// Add new function to handle description changes
-const handleDescriptionChange = async (value: string) => {
-  if (!selectedProperty) return;
-  
-  try {
-    const { error } = await supabase
-      .from('properties')
-      .update({
-        description: value,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', selectedProperty.id);
-
-    if (error) throw error;
-
-    setSettings(prev => ({
-      ...prev,
-      description: value
-    }));
-
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  } catch (err) {
-    console.error('Error updating description:', err);
-    setError('Failed to update description');
-  }
-};
-
 const ImageUpload: React.FC<ImageUploadProps> = ({ type, images, onUpload, onDelete }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -748,26 +683,33 @@ const MarketplaceSettings: React.FC = () => {
           {/* Left Column - Property Info */}
           <div className="lg:col-span-2 space-y-6">
             {/* Property Description */}
-            <Card>
-              <CardHeader className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Deskripsi Properti</h2>
-              </CardHeader>
-              <CardContent>
-                <textarea
-                  value={settings.description}
-                  onChange={(e) => setSettings(prev => ({ ...prev, description: e.target.value }))}
-                  onBlur={(e) => handleDescriptionChange(e.target.value)}
-                  rows={5}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Berikan deskripsi lengkap tentang properti Anda..."
-                />
-                <p className="mt-2 text-sm text-gray-500">
-                  Berikan informasi yang lengkap tentang properti Anda, termasuk lokasi strategis, 
-                  fasilitas umum, dan hal-hal menarik lainnya.
-                </p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader className="flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-semibold text-gray-800">Deskripsi Properti</h2>
+                </CardHeader>
+                <CardContent>
+                  <textarea
+                    value={settings.description}
+                    onChange={(e) => setSettings(prev => ({ ...prev, description: e.target.value }))}
+                    rows={5}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Berikan deskripsi lengkap tentang properti Anda..."
+                  />
+                  <p className="mt-2 text-sm text-gray-500">
+                    Berikan informasi yang lengkap tentang properti Anda, termasuk lokasi strategis, 
+                    fasilitas umum, dan hal-hal menarik lainnya.
+                  </p>
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveSettings}
+                    disabled={isSaving}
+                    className="mt-4 shadow-lg" // ← di sini: mt-4 untuk jarak 16px
+                  >
+                    {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </Button>
+                </CardContent>
+              </Card>
 
             {/* Room Types */}
             <Card>
@@ -933,11 +875,11 @@ const MarketplaceSettings: React.FC = () => {
                             key={index}
                             className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full"
                           >
-                            <span>{amenity}</span>
+                            <span className="text-xs">{amenity}</span>
                           </div>
                         ))
                       ) : (
-                        <p className="text-sm text-gray-500">
+                        <p className="text- text-gray-500">
                           Belum ada fasilitas yang ditambahkan
                         </p>
                       )}
@@ -987,7 +929,7 @@ const MarketplaceSettings: React.FC = () => {
                             key={index}
                             className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full"
                           >
-                            <span>{amenity}</span>
+                            <span className="text-xs">{amenity}</span>
                           </div>
                         ))
                       ) : (
@@ -1039,7 +981,7 @@ const MarketplaceSettings: React.FC = () => {
                       {settings.rules.map((rule, index) => (
                         <li key={index} className="flex items-start gap-2 text-gray-700">
                           <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                          <span>{rule}</span>
+                          <span className="text-s">{rule}</span>
                         </li>
                       ))}
                     </ul>
