@@ -32,7 +32,6 @@ const RoomTypeForm: React.FC<RoomTypeFormProps> = ({
     enable_daily_price: roomType?.enable_daily_price || false,
     enable_weekly_price: roomType?.enable_weekly_price || false,
     enable_yearly_price: roomType?.enable_yearly_price || false,
-    description: roomType?.description || '',
     room_facilities: roomType?.room_facilities || [],
     bathroom_facilities: roomType?.bathroom_facilities || [],
     photos: roomType?.photos || [],
@@ -288,20 +287,6 @@ const RoomTypeForm: React.FC<RoomTypeFormProps> = ({
                   />
                 </div>
               </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Deskripsi
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Deskripsikan tipe kamar ini..."
-              />
             </div>
           </div>
 
