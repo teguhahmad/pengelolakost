@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card, { CardHeader, CardContent } from '../components/ui/Card';
@@ -41,43 +43,6 @@ const COMMON_AMENITIES_SUGGESTIONS = [
   'Taman',
   'Gazebo'
 ];
-
-// Inside the MarketplaceSettings component, add this state:
-const [showHouseRulesForm, setShowHouseRulesForm] = useState(false);
-
-// Add this handler function:
-const handleSaveHouseRules = async (rules: string[], photos: string[]) => {
-  if (!selectedProperty) return;
-  
-  try {
-    setIsLoading(true);
-    setError(null);
-
-    const { error } = await supabase
-      .from('properties')
-      .update({
-        rules,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', selectedProperty.id);
-
-    if (error) throw error;
-
-    setSettings(prev => ({
-      ...prev,
-      rules
-    }));
-
-    setShowHouseRulesForm(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  } catch (err) {
-    console.error('Error saving house rules:', err);
-    setError('Failed to save house rules');
-  } finally {
-    setIsLoading(false);
-  }
-};
 
 const PARKING_AMENITIES_SUGGESTIONS = [
   'Parkir Motor',
@@ -238,6 +203,7 @@ const MarketplaceSettings: React.FC = () => {
   const [pendingRoomTypeUpdate, setPendingRoomTypeUpdate] = useState<Partial<RoomType> | null>(null);
   const [showCommonAmenitiesForm, setShowCommonAmenitiesForm] = useState(false);
   const [showParkingAmenitiesForm, setShowParkingAmenitiesForm] = useState(false);
+  const [showHouseRulesForm, setShowHouseRulesForm] = useState(false);
   
   const [settings, setSettings] = useState({
     marketplace_enabled: false,
@@ -609,6 +575,39 @@ const MarketplaceSettings: React.FC = () => {
     }
   };
 
+  const handleSaveHouseRules = async (rules: string[], photos: string[]) => {
+    if (!selectedProperty) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const { error } = await supabase
+        .from('properties')
+        .update({
+          rules,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedProperty.id);
+
+      if (error) throw error;
+
+      setSettings(prev => ({
+        ...prev,
+        rules
+      }));
+
+      setShowHouseRulesForm(false);
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error saving house rules:', err);
+      setError('Failed to save house rules');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!selectedProperty?.id) {
     return (
       <div className="p-6 text-center text-gray-500">
@@ -951,72 +950,47 @@ const MarketplaceSettings: React.FC = () => {
 
           {/* Right Column - Rules & Preview */}
           <div className="space-y-6">
-{/* House Rules */}
-<Card>
-  <CardHeader className="flex items-center gap-2">
-    <Settings2 className="h-5 w-5 text-blue-600" />
-    <h2 className="text-lg font-semibold text-gray-800">Peraturan Kost</h2>
-  </CardHeader>
-  <CardContent>
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className="text-sm font-medium text-gray-700">Daftar Peraturan</h3>
-          <p className="text-sm text-gray-500">
-            Tetapkan peraturan yang harus dipatuhi oleh penyewa
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowHouseRulesForm(true)}
-        >
-          Edit Peraturan
-        </Button>
-      </div>
-
-      <div className="space-y-2">
-        {settings.rules.length > 0 ? (
-          settings.rules.map((rule, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg"
-            >
-              <CheckCircle size={16} className="text-green-500" />
-              <span className="text-gray-700">{rule}</span>
-            </div>
-          ))
-        ) : (
-          <p className="text-sm text-gray-500">
-            Belum ada peraturan yang ditambahkan
-          </p>
-        )}
-      </div>
-    </div>
-  </CardContent>
-</Card>
-
-{/* Add this at the end of the component, before the closing div */}
-{showHouseRulesForm && (
-  <HouseRulesForm
-    rules={settings.rules}
-    photos={[]} // We're not using photos for now
-    onSave={handleSaveHouseRules}
-    onClose={() => setShowHouseRulesForm(false)}
-  />
-)}
-
-            {/* Preview Card */}
+            {/* House Rules */}
             <Card>
               <CardHeader className="flex items-center gap-2">
-                <Eye className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Preview</h2>
+                <Settings2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Peraturan Kost</h2>
               </CardHeader>
               <CardContent>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-sm text-gray-500">
-                    Pratinjau tampilan properti Anda di marketplace akan tersedia segera.
-                  </p>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-700">Daftar Peraturan</h3>
+                      <p className="text-sm text-gray-500">
+                        Tetapkan peraturan yang harus dipatuhi oleh penyewa
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowHouseRulesForm(true)}
+                    >
+                      Edit Peraturan
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {settings.rules.length > 0 ? (
+                      settings.rules.map((rule, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg"
+                        >
+                          <CheckCircle size={16} className="text-green-500" />
+                          <span className="text-gray-700">{rule}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-500">
+                        Belum ada peraturan yang ditambahkan
+                      </p>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1106,6 +1080,15 @@ const MarketplaceSettings: React.FC = () => {
             suggestions={PARKING_AMENITIES_SUGGESTIONS}
             onSave={handleSaveParkingAmenities}
             onClose={() => setShowParkingAmenitiesForm(false)}
+          />
+        )}
+
+        {showHouseRulesForm && (
+          <HouseRulesForm
+            rules={settings.rules}
+            photos={[]} // We're not using photos for now
+            onSave={handleSaveHouseRules}
+            onClose={() => setShowHouseRulesForm(false)}
           />
         )}
       </div>
