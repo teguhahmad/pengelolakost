@@ -951,49 +951,37 @@ const MarketplaceSettings: React.FC = () => {
           {/* Right Column - Rules & Preview */}
           <div className="space-y-6">
             {/* House Rules */}
-            <Card>
-              <CardHeader className="flex items-center gap-2">
-                <Settings2 className="h-5 w-5 text-blue-600" />
-                <h2 className="text-lg font-semibold text-gray-800">Peraturan Kost</h2>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center mb-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center gap-2">
+                  <Settings2 className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-semibold text-gray-800">Peraturan Kost</h2>
+                </CardHeader>
+              
+                <CardContent>
+                  <div className="mb-4 flex justify-between items-center">
                     <div>
                       <h3 className="text-sm font-medium text-gray-700">Daftar Peraturan</h3>
-                      <p className="text-sm text-gray-500">
-                        Tetapkan peraturan yang harus dipatuhi oleh penyewa
-                      </p>
+                      <p className="text-sm text-gray-500">Harus dipatuhi oleh penyewa</p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowHouseRulesForm(true)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setShowHouseRulesForm(true)}>
                       Edit Peraturan
                     </Button>
                   </div>
-
-                  <div className="space-y-2">
-                    {settings.rules.length > 0 ? (
-                      settings.rules.map((rule, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg"
-                        >
-                          <CheckCircle size={16} className="text-green-500" />
-                          <span className="text-gray-700">{rule}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-sm text-gray-500">
-                        Belum ada peraturan yang ditambahkan
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              
+                  {settings.rules.length > 0 ? (
+                    <ul className="space-y-2">
+                      {settings.rules.map((rule, index) => (
+                        <li key={index} className="flex items-start gap-2 text-gray-700">
+                          <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
+                          <span>{rule}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">Belum ada peraturan ditambahkan.</p>
+                  )}
+                </CardContent>
+              </Card>
           </div>
         </div>
 
