@@ -61,6 +61,71 @@ interface ImageUploadProps {
   onDelete: (url: string) => void;
 }
 
+// Update the handleSaveSettings function to be more specific
+const handleToggleMarketplace = async () => {
+  if (!selectedProperty) return;
+
+  try {
+    setIsSaving(true);
+    setError(null);
+
+    const newEnabled = !settings.marketplace_enabled;
+
+    const { error } = await supabase
+      .from('properties')
+      .update({
+        marketplace_enabled: newEnabled,
+        marketplace_status: newEnabled ? 'published' : 'draft',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selectedProperty.id);
+
+    if (error) throw error;
+
+    setSettings(prev => ({
+      ...prev,
+      marketplace_enabled: newEnabled,
+      marketplace_status: newEnabled ? 'published' : 'draft'
+    }));
+
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  } catch (err) {
+    console.error('Error toggling marketplace:', err);
+    setError('Failed to update marketplace status');
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+// Add new function to handle description changes
+const handleDescriptionChange = async (value: string) => {
+  if (!selectedProperty) return;
+  
+  try {
+    const { error } = await supabase
+      .from('properties')
+      .update({
+        description: value,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selectedProperty.id);
+
+    if (error) throw error;
+
+    setSettings(prev => ({
+      ...prev,
+      description: value
+    }));
+
+    setShowSuccess(true);
+    setTimeout(() => setShowSuccess(false), 3000);
+  } catch (err) {
+    console.error('Error updating description:', err);
+    setError('Failed to update description');
+  }
+};
+
 const ImageUpload: React.FC<ImageUploadProps> = ({ type, images, onUpload, onDelete }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -692,6 +757,7 @@ const MarketplaceSettings: React.FC = () => {
                 <textarea
                   value={settings.description}
                   onChange={(e) => setSettings(prev => ({ ...prev, description: e.target.value }))}
+                  onBlur={(e) => handleDescriptionChange(e.target.value)}
                   rows={5}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Berikan deskripsi lengkap tentang properti Anda..."
@@ -983,19 +1049,6 @@ const MarketplaceSettings: React.FC = () => {
                 </CardContent>
               </Card>
           </div>
-        </div>
-
-        {/* Save Button */}
-        <div className="fixed bottom-6 right-6">
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="shadow-lg"
-          >
-            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
-          </Button>
         </div>
 
         {showRoomTypeForm && (
