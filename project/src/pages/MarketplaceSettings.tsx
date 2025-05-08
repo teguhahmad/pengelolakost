@@ -5,7 +5,23 @@ import RoomTypeForm from '../components/rooms/RoomTypeForm';
 import { Property, RoomType } from '../types';
 import { useProperty } from '../contexts/PropertyContext';
 import { supabase } from '../lib/supabase';
-import { Store, Plus, X, Eye, EyeOff, Globe, CheckCircle, Trash, Loader2, ImageIcon, AlertTriangle } from 'lucide-react';
+import { 
+  Store, 
+  Plus, 
+  X, 
+  Eye, 
+  EyeOff, 
+  Globe, 
+  CheckCircle, 
+  Trash, 
+  Loader2, 
+  ImageIcon, 
+  AlertTriangle,
+  Building2,
+  DoorClosed,
+  Pencil,
+  Settings2
+} from 'lucide-react';
 import FeatureGuard from '../components/ui/FeatureGuard';
 
 interface ImageUploadProps {
@@ -106,14 +122,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ type, images, onUpload, onDel
             onChange={handleUpload}
             disabled={isUploading}
           />
-          <div className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
-            {isUploading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ImageIcon className="w-4 h-4" />
-            )}
+          <Button
+            variant="outline"
+            disabled={isUploading}
+            icon={isUploading ? <Loader2 className="animate-spin" /> : <ImageIcon />}
+          >
             Upload Gambar
-          </div>
+          </Button>
         </label>
       </div>
 
@@ -125,15 +140,15 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ type, images, onUpload, onDel
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
         {images.map((url, index) => (
-          <div key={index} className="relative group">
+          <div key={index} className="relative group aspect-square">
             <img
               src={url}
               alt={`${type} facility ${index + 1}`}
-              className="w-full h-32 object-cover rounded-lg"
+              className="w-full h-full object-cover rounded-lg"
             />
             <button
               onClick={() => handleDelete(url)}
-              className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 p-1.5 bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
             >
               <Trash className="w-4 h-4" />
             </button>
@@ -150,7 +165,6 @@ const MarketplaceSettings: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showFacilitiesForm, setShowFacilitiesForm] = useState(false);
   const [showRoomTypeForm, setShowRoomTypeForm] = useState(false);
   const [editingRoomType, setEditingRoomType] = useState<RoomType | undefined>();
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -485,8 +499,15 @@ const MarketplaceSettings: React.FC = () => {
       }
     >
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Pengaturan Marketplace</h1>
+          <div className="flex items-center gap-3">
+            <Store className="h-8 w-8 text-blue-600" />
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Pengaturan Marketplace</h1>
+              <p className="text-gray-500">Kelola tampilan properti Anda di marketplace</p>
+            </div>
+          </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center">
               <label className="relative inline-flex items-center cursor-pointer">
@@ -518,213 +539,393 @@ const MarketplaceSettings: React.FC = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center">
+            <AlertTriangle className="h-5 w-5 mr-2" />
             {error}
           </div>
         )}
 
         {showSuccess && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative flex items-center">
-            <CheckCircle size={20} className="mr-2" />
-            Settings saved successfully!
+          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center">
+            <CheckCircle className="h-5 w-5 mr-2" />
+            Pengaturan berhasil disimpan!
           </div>
         )}
 
-        {/* Description */}
-        <Card>
-          <CardHeader>
-            <h2 className="text-lg font-semibold text-gray-800">Deskripsi Kost</h2>
-          </CardHeader>
-          <CardContent>
-            <textarea
-              value={settings.description}
-              onChange={(e) => setSettings(prev => ({ ...prev, description: e.target.value }))}
-              rows={5}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Berikan deskripsi lengkap tentang kost Anda..."
-            />
-            <p className="mt-2 text-sm text-gray-500">
-              Berikan informasi yang lengkap tentang kost Anda, termasuk lokasi strategis, fasilitas umum, 
-              dan hal-hal menarik lainnya yang membuat kost Anda berbeda.
-            </p>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Property Info */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Property Description */}
+            <Card>
+              <CardHeader className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Deskripsi Properti</h2>
+              </CardHeader>
+              <CardContent>
+                <textarea
+                  value={settings.description}
+                  onChange={(e) => setSettings(prev => ({ ...prev, description: e.target.value }))}
+                  rows={5}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Berikan deskripsi lengkap tentang properti Anda..."
+                />
+                <p className="mt-2 text-sm text-gray-500">
+                  Berikan informasi yang lengkap tentang properti Anda, termasuk lokasi strategis, 
+                  fasilitas umum, dan hal-hal menarik lainnya.
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800">Tipe Kamar</h2>
-            <Button
-              onClick={() => {
-                setEditingRoomType(undefined);
-                setShowRoomTypeForm(true);
-              }}
-              icon={<Plus size={16} />}
-            >
-              Tambah Tipe Kamar
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {roomTypes.map(roomType => (
-                <div
-                  key={roomType.id}
-                  className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+            {/* Room Types */}
+            <Card>
+              <CardHeader className="flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <DoorClosed className="h-5 w-5 text-blue-600" />
+                  <h2 className="text-lg font-semibold text-gray-800">Tipe Kamar</h2>
+                </div>
+                <Button
+                  onClick={() => {
+                    setEditingRoomType(undefined);
+                    setShowRoomTypeForm(true);
+                  }}
+                  icon={<Plus size={16} />}
                 >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{roomType.name}</h3>
-                      <p className="text-sm text-gray-500">{roomType.description}</p>
+                  Tambah Tipe Kamar
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 gap-4">
+                  {roomTypes.map(roomType => (
+                    <div
+                      key={roomType.id}
+                      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-medium text-gray-900">{roomType.name}</h3>
+                          <p className="text-sm text-gray-500">{roomType.description}</p>
+                        </div>
+                        <p className="text-lg font-bold text-blue-600">
+                          {new Intl.NumberFormat('id-ID', {
+                            style: 'currency',
+                            currency: 'IDR'
+                          }).format(roomType.price)}
+                          <span className="text-sm text-gray-500">/bulan</span>
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Kapasitas</span>
+                          <span className="font-medium">{roomType.max_occupancy} orang</span>
+                        </div>
+                        
+                        {roomType.enable_daily_price && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Harga Harian</span>
+                            <span className="font-medium">
+                              {new Intl.NumberFormat('id-ID', {
+                                style: 'currency',
+                                currency: 'IDR'
+                              }).format(roomType.daily_price || 0)}
+                            </span>
+                          </div>
+                        )}
+
+                        {roomType.enable_weekly_price && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Harga Mingguan</span>
+                            <span className="font-medium">
+                              {new Intl.NumberFormat('id-ID', {
+                                style: 'currency',
+                                currency: 'IDR'
+                              }).format(roomType.weekly_price || 0)}
+                            </span>
+                          </div>
+                        )}
+
+                        {roomType.enable_yearly_price && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Harga Tahunan</span>
+                            <span className="font-medium">
+                              {new Intl.NumberFormat('id-ID', {
+                                style: 'currency',
+                                currency: 'IDR'
+                              }).format(roomType.yearly_price || 0)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {(roomType.room_facilities?.length > 0 || roomType.bathroom_facilities?.length > 0) && (
+                        <div className="mt-4 pt-4 border-t border-gray-100">
+                          <div className="flex flex-wrap gap-2">
+                            {roomType.room_facilities?.map((facility, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full text-xs"
+                              >
+                                {facility}
+                              </span>
+                            ))}
+                            {roomType.bathroom_facilities?.map((facility, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-1 bg-green-50 text-green-700 rounded-full text-xs"
+                              >
+                                {facility}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingRoomType(roomType);
+                            setShowRoomTypeForm(true);
+                          }}
+                          icon={<Pencil size={14} />}
+                        >
+                          Edit
+                        </Button>
+                        <Button
+                          variant="danger"
+                          size="sm"
+                          onClick={() => handleDeleteRoomType(roomType.id)}
+                          icon={<Trash size={14} />}
+                        >
+                          Hapus
+                        </Button>
+                      </div>
                     </div>
-                    <p className="text-lg font-bold text-blue-600">
-                      {new Intl.NumberFormat('id-ID', {
-                        style: 'currency',
-                        currency: 'IDR'
-                      }).format(roomType.price)}
-                      <span className="text-sm text-gray-500">/bulan</span>
-                    </p>
+                  ))}
+
+                  {roomTypes.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">
+                      Belum ada tipe kamar yang ditambahkan
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Common Amenities */}
+            <Card>
+              <CardHeader className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Fasilitas Umum</h2>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Daftar Fasilitas
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {settings.common_amenities.map((amenity, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full"
+                        >
+                          <span>{amenity}</span>
+                          <button
+                            onClick={() => setSettings(prev => ({
+                              ...prev,
+                              common_amenities: prev.common_amenities.filter((_, i) => i !== index)
+                            }))}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <input
+                        type="text"
+                        placeholder="Tambah fasilitas..."
+                        className="px-3 py-1.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const value = (e.target as HTMLInputElement).value.trim();
+                            if (value) {
+                              setSettings(prev => ({
+                                ...prev,
+                                common_amenities: [...prev.common_amenities, value]
+                              }));
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Kapasitas</span>
-                      <span className="font-medium">{roomType.max_occupancy} orang</span>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Foto Fasilitas
+                    </label>
+                    <ImageUpload
+                      type="common"
+                      images={settings.common_amenities_photos}
+                      onUpload={(url) => handleAddPhoto(url, 'common')}
+                      onDelete={(url) => handleDeletePhoto(url, 'common')}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Parking Amenities */}
+            <Card>
+              <CardHeader className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Fasilitas Parkir</h2>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Daftar Fasilitas
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {settings.parking_amenities.map((amenity, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full"
+                        >
+                          <span>{amenity}</span>
+                          <button
+                            onClick={() => setSettings(prev => ({
+                              ...prev,
+                              parking_amenities: prev.parking_amenities.filter((_, i) => i !== index)
+                            }))}
+                            className="text-blue-600 hover:text-blue-800"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ))}
+                      <input
+                        type="text"
+                        placeholder="Tambah fasilitas..."
+                        className="px-3 py-1.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const value = (e.target as HTMLInputElement).value.trim();
+                            if (value) {
+                              setSettings(prev => ({
+                                ...prev,
+                                parking_amenities: [...prev.parking_amenities, value]
+                              }));
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                      />
                     </div>
-                    
-                    {roomType.enable_daily_price && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Harga Harian</span>
-                        <span className="font-medium">
-                          {new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR'
-                          }).format(roomType.daily_price || 0)}
-                        </span>
-                      </div>
-                    )}
-
-                    {roomType.enable_weekly_price && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Harga Mingguan</span>
-                        <span className="font-medium">
-                          {new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR'
-                          }).format(roomType.weekly_price || 0)}
-                        </span>
-                      </div>
-                    )}
-
-                    {roomType.enable_yearly_price && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Harga Tahunan</span>
-                        <span className="font-medium">
-                          {new Intl.NumberFormat('id-ID', {
-                            style: 'currency',
-                            currency: 'IDR'
-                          }).format(roomType.yearly_price || 0)}
-                        </span>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {roomType.room_facilities?.map((facility, index) => (
-                      <span
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Foto Fasilitas
+                    </label>
+                    <ImageUpload
+                      type="parking"
+                      images={settings.parking_amenities_photos}
+                      onUpload={(url) => handleAddPhoto(url, 'parking')}
+                      onDelete={(url) => handleDeletePhoto(url, 'parking')}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column - Rules & Preview */}
+          <div className="space-y-6">
+            {/* House Rules */}
+            <Card>
+              <CardHeader className="flex items-center gap-2">
+                <Settings2 className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Peraturan Kost</h2>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    {settings.rules.map((rule, index) => (
+                      <div
                         key={index}
-                        className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs"
+                        className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full"
                       >
-                        {facility}
-                      </span>
+                        <span>{rule}</span>
+                        <button
+                          onClick={() => setSettings(prev => ({
+                            ...prev,
+                            rules: prev.rules.filter((_, i) => i !== index)
+                          }))}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
                     ))}
                   </div>
-
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setEditingRoomType(roomType);
-                        setShowRoomTypeForm(true);
-                      }}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      onClick={() => handleDeleteRoomType(roomType.id)}
-                    >
-                      Hapus
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800">Fasilitas Umum & Parkir</h2>
-            <Button
-              onClick={() => setShowFacilitiesForm(true)}
-              icon={<Plus size={16} />}
-            >
-              Edit Fasilitas
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Fasilitas Umum</h3>
-                <div className="flex flex-wrap gap-2">
-                  {settings.common_amenities.map(facility => (
-                    <span
-                      key={facility}
-                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                    >
-                      {facility}
-                    </span>
-                  ))}
-                </div>
-                
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Foto Fasilitas Umum</h4>
-                  <ImageUpload
-                    type="common"
-                    images={settings.common_amenities_photos}
-                    onUpload={(url) => handleAddPhoto(url, 'common')}
-                    onDelete={(url) => handleDeletePhoto(url, 'common')}
+                  <input
+                    type="text"
+                    placeholder="Tambah peraturan..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const value = (e.target as HTMLInputElement).value.trim();
+                        if (value) {
+                          setSettings(prev => ({
+                            ...prev,
+                            rules: [...prev.rules, value]
+                          }));
+                          (e.target as HTMLInputElement).value = '';
+                        }
+                      }
+                    }}
                   />
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-2">Fasilitas Parkir</h3>
-                <div className="flex flex-wrap gap-2">
-                  {settings.parking_amenities.map(facility => (
-                    <span
-                      key={facility}
-                      className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-                    >
-                      {facility}
-                    </span>
-                  ))}
+            {/* Preview Card */}
+            <Card>
+              <CardHeader className="flex items-center gap-2">
+                <Eye className="h-5 w-5 text-blue-600" />
+                <h2 className="text-lg font-semibold text-gray-800">Preview</h2>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="text-sm text-gray-500">
+                    Pratinjau tampilan properti Anda di marketplace akan tersedia segera.
+                  </p>
                 </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
 
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Foto Fasilitas Parkir</h4>
-                  <ImageUpload
-                    type="parking"
-                    images={settings.parking_amenities_photos}
-                    onUpload={(url) => handleAddPhoto(url, 'parking')}
-                    onDelete={(url) => handleDeletePhoto(url, 'parking')}
-                  />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Save Button */}
+        <div className="fixed bottom-6 right-6">
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={handleSaveSettings}
+            disabled={isSaving}
+            className="shadow-lg"
+          >
+            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+          </Button>
+        </div>
 
         {showRoomTypeForm && (
           <RoomTypeForm
@@ -778,19 +979,6 @@ const MarketplaceSettings: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Save Button */}
-        <div className="fixed bottom-6 right-6">
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={handleSaveSettings}
-            disabled={isSaving}
-            className="shadow-lg"
-          >
-            {isSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
-          </Button>
-        </div>
       </div>
     </FeatureGuard>
   );
