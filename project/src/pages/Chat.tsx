@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowLeft, Send, Image, Paperclip, ChevronDown, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, Menu, X, ChevronLeft, Loader2 } from 'lucide-react';
 import { chatService } from '../services/supabase';
 
 interface ChatMessage {
@@ -36,6 +36,8 @@ const Chat: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [showUserList, setShowUserList] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     initializeChat();
@@ -46,6 +48,18 @@ const Chat: React.FC = () => {
         channel.unsubscribe();
       }
     };
+  }, []);
+
+  useEffect(() => {
+    // Handle responsive layout
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setShowUserList(true);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const initializeChat = async () => {
@@ -77,6 +91,9 @@ const Chat: React.FC = () => {
           setSelectedUser(user);
           const messages = await chatService.getMessages(user.userId);
           setMessages(messages || []);
+          if (window.innerWidth < 768) {
+            setShowUserList(false);
+          }
         }
       }
 
@@ -110,6 +127,9 @@ const Chat: React.FC = () => {
       const messages = await chatService.getMessages(user.id);
       setMessages(messages || []);
       scrollToBottom();
+      if (window.innerWidth < 768) {
+        setShowUserList(false);
+      }
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
@@ -123,6 +143,7 @@ const Chat: React.FC = () => {
     try {
       await chatService.sendMessage(selectedUser.id, newMessage.trim());
       setNewMessage('');
+      scrollToBottom();
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to send message');
@@ -133,19 +154,16 @@ const Chat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleScrollToBottom = () => {
-    chatContainerRef.current?.scrollTo({
-      top: chatContainerRef.current.scrollHeight,
-      behavior: 'smooth'
-    });
-  };
-
   const formatMessageTime = (timestamp: string) => {
     return formatDistanceToNow(new Date(timestamp), {
       addSuffix: true,
       locale: id
     });
   };
+
+  const filteredUsers = users.filter(user =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   if (isLoading) {
     return (
@@ -157,15 +175,39 @@ const Chat: React.FC = () => {
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
-      {/* Header */}
-      <div className="bg-white shadow-sm z-10">
-        <div className="max-w-4xl mx-auto px-4">
+      {/* Mobile Header */}
+      <div className="md:hidden bg-white shadow-sm z-10">
+        <div className="h-16 px-4 flex items-center justify-between">
+          {showUserList ? (
+            <>
+              <button onClick={() => navigate(-1)} className="text-gray-600">
+                <ArrowLeft size={24} />
+              </button>
+              <h1 className="text-lg font-semibold">Chat</h1>
+              <div className="w-8" /> {/* Spacer for alignment */}
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => setShowUserList(true)} 
+                className="flex items-center text-gray-600"
+              >
+                <ChevronLeft size={24} />
+                <span className="ml-2">Back</span>
+              </button>
+              <span className="font-medium">{selectedUser?.name}</span>
+              <div className="w-8" /> {/* Spacer for alignment */}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-white shadow-sm z-10">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="h-16 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <button 
-                onClick={() => navigate(-1)}
-                className="text-gray-600 hover:text-gray-900"
-              >
+              <button onClick={() => navigate(-1)} className="text-gray-600">
                 <ArrowLeft size={24} />
               </button>
               <h1 className="text-xl font-semibold">Chat</h1>
@@ -177,62 +219,70 @@ const Chat: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Users List */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+        <div 
+          className={`${
+            showUserList ? 'flex' : 'hidden'
+          } md:flex flex-col w-full md:w-80 bg-white border-r border-gray-200`}
+        >
           <div className="p-4">
             <input
               type="text"
               placeholder="Cari chat..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full px-4 py-2 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {users.map(user => (
-            <button
-              key={user.id}
-              onClick={() => handleUserSelect(user)}
-              className={`w-full p-4 flex items-center gap-3 hover:bg-gray-50 ${
-                selectedUser?.id === user.id ? 'bg-blue-50' : ''
-              }`}
-            >
-              <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-lg">
-                {user.name.charAt(0).toUpperCase()}
-              </div>
-              <div className="flex-1 text-left">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">{user.name}</span>
+          <div className="flex-1 overflow-y-auto">
+            {users.map(user => (
+              <button
+                key={user.id}
+                onClick={() => handleUserSelect(user)}
+                className={`w-full p-4 flex items-center gap-3 hover:bg-gray-50 ${
+                  selectedUser?.id === user.id ? 'bg-blue-50' : ''
+                }`}
+              >
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold text-lg">
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
-                {user.last_message && (
-                  <p className="text-sm text-gray-500 truncate">{user.last_message}</p>
-                )}
-                {user.last_message_time && (
-                  <span className="text-xs text-gray-500 mt-1 block">
-                    {formatMessageTime(user.last_message_time)}
-                  </span>
-                )}
-              </div>
-              {user.unread_count > 0 && (
-                <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
-                  {user.unread_count}
+                <div className="flex-1 text-left">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{user.name}</span>
+                  </div>
+                  {user.last_message && (
+                    <p className="text-sm text-gray-500 truncate">{user.last_message}</p>
+                  )}
+                  {user.last_message_time && (
+                    <span className="text-xs text-gray-500 mt-1 block">
+                      {formatMessageTime(user.last_message_time)}
+                    </span>
+                  )}
                 </div>
-              )}
-            </button>
-          ))}
+                {user.unread_count > 0 && (
+                  <div className="w-6 h-6 rounded-full bg-blue-500 text-white text-xs flex items-center justify-center">
+                    {user.unread_count}
+                  </div>
+                )}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col bg-gray-100">
+        <div className={`${
+          !showUserList ? 'flex' : 'hidden'
+        } md:flex flex-1 flex-col bg-gray-100`}>
           {selectedUser ? (
             <>
-              {/* Chat Header */}
-              <div className="bg-white border-b border-gray-200 px-6 py-3 flex items-center">
+              {/* Chat Header - Desktop */}
+              <div className="hidden md:flex bg-white border-b border-gray-200 px-6 py-3 items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
                     {selectedUser.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <h2 className="font-medium">{selectedUser.name}</h2>
-                    <p className="text-xs text-gray-500">Online</p>
                   </div>
                 </div>
               </div>
@@ -240,7 +290,7 @@ const Chat: React.FC = () => {
               {/* Messages */}
               <div 
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto px-6 py-4 space-y-4"
+                className="flex-1 overflow-y-auto px-4 py-4 space-y-4"
               >
                 {messages.map((message, index) => {
                   const isSender = message.sender_id === currentUser.id;
@@ -264,7 +314,7 @@ const Chat: React.FC = () => {
                             : 'bg-white text-gray-900 rounded-bl-none'
                         }`}
                       >
-                        <p className="text-sm">{message.content}</p>
+                        <p className="text-sm break-words">{message.content}</p>
                         <p className={`text-xs mt-1 ${
                           isSender ? 'text-blue-100' : 'text-gray-500'
                         }`}>
@@ -276,16 +326,6 @@ const Chat: React.FC = () => {
                 })}
                 <div ref={messagesEndRef} />
               </div>
-
-              {/* Scroll to Bottom Button */}
-              {showScrollButton && (
-                <button
-                  onClick={handleScrollToBottom}
-                  className="absolute bottom-24 right-8 bg-white rounded-full p-2 shadow-lg"
-                >
-                  <ChevronDown size={24} className="text-gray-600" />
-                </button>
-              )}
 
               {/* Message Input */}
               <div className="bg-white border-t border-gray-200 p-4">
@@ -315,7 +355,6 @@ const Chat: React.FC = () => {
         </div>
       </div>
     </div>
-  </div>
   );
 };
 
