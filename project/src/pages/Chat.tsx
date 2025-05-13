@@ -22,6 +22,8 @@ interface ChatUser {
   unread_count: number;
 }
 
+const POLLING_INTERVAL = 3000; // Poll every 3 seconds
+
 const Chat: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,83 +37,65 @@ const Chat: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const pollingIntervalRef = useRef<number>();
 
-  // Check authentication and initialize chat
   useEffect(() => {
-    const initializeChat = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          navigate('/login', { state: { from: location.pathname } });
-          return;
-        }
-
-        setCurrentUser(session.user);
-        setIsLoading(false);
-
-        // If we have a receiver from navigation state, select them
-        const state = location.state as any;
-        if (state?.receiverId) {
-          const userDetails = await fetchUserDetails([state.receiverId]);
-          if (userDetails.length > 0) {
-            setSelectedUser({
-              id: userDetails[0].id,
-              name: userDetails[0].name,
-              unread_count: 0
-            });
-          }
-        }
-      } catch (err) {
-        console.error('Error initializing chat:', err);
-        setError('Failed to initialize chat');
-        setIsLoading(false);
+    initializeChat();
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
       }
     };
-
-    initializeChat();
   }, []);
 
-  // Subscribe to new messages
-  useEffect(() => {
-    if (!currentUser) return;
+  const initializeChat = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        navigate('/login', { state: { from: location.pathname } });
+        return;
+      }
 
-    const channel = supabase
-      .channel('chat_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'chat_messages',
-          filter: `receiver_id=eq.${currentUser.id}`
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newMessage = payload.new as ChatMessage;
-            setMessages(prev => [...prev, newMessage]);
-            loadChatUsers(); // Refresh user list to update unread counts
-          }
+      setCurrentUser(session.user);
+      setIsLoading(false);
+
+      // Start polling for messages
+      startPolling();
+
+      // If we have a receiver from navigation state, select them
+      const state = location.state as any;
+      if (state?.receiverId) {
+        const userDetails = await fetchUserDetails([state.receiverId]);
+        if (userDetails.length > 0) {
+          setSelectedUser({
+            id: userDetails[0].id,
+            name: userDetails[0].name,
+            unread_count: 0
+          });
         }
-      )
-      .subscribe();
+      }
+    } catch (err) {
+      console.error('Error initializing chat:', err);
+      setError('Failed to initialize chat');
+      setIsLoading(false);
+    }
+  };
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [currentUser]);
-
-  // Load initial messages when user is selected
-  useEffect(() => {
+  const startPolling = () => {
+    // Initial load
+    loadChatUsers();
     if (selectedUser) {
       loadMessages(selectedUser.id);
-      markMessagesAsRead(selectedUser.id);
     }
-  }, [selectedUser]);
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
+    // Set up polling
+    pollingIntervalRef.current = setInterval(() => {
+      loadChatUsers();
+      if (selectedUser) {
+        loadMessages(selectedUser.id);
+      }
+    }, POLLING_INTERVAL);
+  };
 
   const fetchUserDetails = async (userIds: string[]) => {
     try {
@@ -203,28 +187,31 @@ const Chat: React.FC = () => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setMessages(data || []);
+      
+      // Only update messages if there are changes
+      if (JSON.stringify(data) !== JSON.stringify(messages)) {
+        setMessages(data || []);
+        scrollToBottom();
+      }
+
+      // Mark messages as read
+      const unreadMessages = data?.filter(msg => 
+        msg.sender_id === userId && 
+        msg.receiver_id === currentUser.id && 
+        !msg.read
+      ) || [];
+
+      if (unreadMessages.length > 0) {
+        await Promise.all(unreadMessages.map(msg =>
+          supabase
+            .from('chat_messages')
+            .update({ read: true })
+            .eq('id', msg.id)
+        ));
+      }
     } catch (err) {
       console.error('Error loading messages:', err);
       setError('Failed to load messages');
-    }
-  };
-
-  const markMessagesAsRead = async (userId: string) => {
-    if (!currentUser) return;
-
-    try {
-      const { error } = await supabase
-        .from('chat_messages')
-        .update({ read: true })
-        .eq('sender_id', userId)
-        .eq('receiver_id', currentUser.id)
-        .eq('read', false);
-
-      if (error) throw error;
-      loadChatUsers(); // Refresh unread counts
-    } catch (err) {
-      console.error('Error marking messages as read:', err);
     }
   };
 
