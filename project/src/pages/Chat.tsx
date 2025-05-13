@@ -31,6 +31,7 @@ const Chat: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadCurrentUser();
@@ -55,11 +56,18 @@ const Chat: React.FC = () => {
   }, [messages]);
 
   const loadCurrentUser = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      setCurrentUser(user);
-    } else {
-      navigate('/login');
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      
+      if (user) {
+        setCurrentUser(user);
+      } else {
+        navigate('/login');
+      }
+    } catch (err) {
+      console.error('Error loading current user:', err);
+      setError('Failed to load user data');
     }
   };
 
@@ -83,16 +91,60 @@ const Chat: React.FC = () => {
     };
   };
 
+  const fetchUserDetails = async (userIds: string[]) => {
+    try {
+      if (!userIds.length) return [];
+
+      const session = await supabase.auth.getSession();
+      const accessToken = session.data.session?.access_token;
+      
+      if (!accessToken) {
+        throw new Error('No access token available');
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-user-details`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userIds }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch user details');
+      }
+
+      const data = await response.json();
+      
+      if (!data.users || !Array.isArray(data.users)) {
+        throw new Error('Invalid response format from server');
+      }
+
+      return data.users;
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      setError(error.message);
+      return [];
+    }
+  };
+
   const loadChatUsers = async () => {
     try {
       setIsLoading(true);
-      const { data: messages, error } = await supabase
+      setError(null);
+
+      const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (messagesError) throw messagesError;
 
       const userIds = new Set<string>();
       messages?.forEach(msg => {
@@ -100,59 +152,63 @@ const Chat: React.FC = () => {
         if (msg.receiver_id !== currentUser.id) userIds.add(msg.receiver_id);
       });
 
-      const users: ChatUser[] = [];
-      for (const userId of userIds) {
-        const { data: userData } = await supabase.auth.admin.getUserById(userId);
-        if (userData?.user) {
-          const lastMessage = messages?.find(msg => 
-            msg.sender_id === userId || msg.receiver_id === userId
-          );
-          const unreadCount = messages?.filter(msg => 
-            msg.sender_id === userId && msg.receiver_id === currentUser.id && !msg.read
-          ).length || 0;
+      const userDetails = await fetchUserDetails(Array.from(userIds));
+      
+      const users: ChatUser[] = userDetails.map(userData => {
+        const lastMessage = messages?.find(msg => 
+          msg.sender_id === userData.id || msg.receiver_id === userData.id
+        );
+        const unreadCount = messages?.filter(msg => 
+          msg.sender_id === userData.id && msg.receiver_id === currentUser.id && !msg.read
+        ).length || 0;
 
-          users.push({
-            id: userId,
-            name: userData.user.user_metadata?.name || userData.user.email,
-            last_message: lastMessage?.content,
-            last_message_time: lastMessage?.created_at,
-            unread_count: unreadCount
-          });
-        }
-      }
+        return {
+          id: userData.id,
+          name: userData.name || userData.email,
+          last_message: lastMessage?.content,
+          last_message_time: lastMessage?.created_at,
+          unread_count: unreadCount
+        };
+      });
 
       setUsers(users);
     } catch (err) {
       console.error('Error loading chat users:', err);
+      setError('Failed to load chat users');
     } finally {
       setIsLoading(false);
     }
   };
 
   const loadMessages = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('chat_messages')
-      .select('*')
-      .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`)
-      .order('created_at', { ascending: true });
+    try {
+      setError(null);
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`)
+        .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('Error loading messages:', error);
-    } else {
+      if (error) throw error;
       setMessages(data || []);
+    } catch (err) {
+      console.error('Error loading messages:', err);
+      setError('Failed to load messages');
     }
   };
 
   const markMessagesAsRead = async (userId: string) => {
-    const { error } = await supabase
-      .from('chat_messages')
-      .update({ read: true })
-      .eq('sender_id', userId)
-      .eq('receiver_id', currentUser.id)
-      .eq('read', false);
+    try {
+      const { error } = await supabase
+        .from('chat_messages')
+        .update({ read: true })
+        .eq('sender_id', userId)
+        .eq('receiver_id', currentUser.id)
+        .eq('read', false);
 
-    if (error) {
-      console.error('Error marking messages as read:', error);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error marking messages as read:', err);
     }
   };
 
@@ -161,6 +217,7 @@ const Chat: React.FC = () => {
     if (!newMessage.trim() || !selectedUser) return;
 
     try {
+      setError(null);
       const { error } = await supabase
         .from('chat_messages')
         .insert([{
@@ -174,12 +231,33 @@ const Chat: React.FC = () => {
       setNewMessage('');
     } catch (err) {
       console.error('Error sending message:', err);
+      setError('Failed to send message');
     }
   };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h3 className="text-red-600 font-medium mb-2">Error</h3>
+          <p className="text-gray-700">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              loadChatUsers();
+            }}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
