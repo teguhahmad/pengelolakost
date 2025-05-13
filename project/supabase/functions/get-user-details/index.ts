@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing required environment variables');
+      throw new Error('Missing environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
     }
 
     const supabase = createClient(
@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     // Get authorization header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      throw new Error('No authorization header');
+      throw new Error('Authorization header is required');
     }
 
     // Verify the requesting user is authorized
@@ -47,76 +47,69 @@ Deno.serve(async (req) => {
     );
 
     if (authError) {
-      console.error('Auth error:', authError);
-      throw new Error('Authentication failed');
+      console.error('Authentication error:', authError);
+      throw new Error('Authentication failed: Invalid token');
     }
 
     if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Check if user has admin or superadmin role
-    const { data: backofficeUser, error: roleError } = await supabase
-      .from('backoffice_users')
-      .select('role')
-      .eq('user_id', user.id)
-      .single();
-
-    if (roleError) {
-      console.error('Role check error:', roleError);
-      throw new Error('Failed to verify user role');
-    }
-
-    if (!backofficeUser || !['admin', 'superadmin'].includes(backofficeUser.role)) {
-      throw new Error('Unauthorized - Insufficient permissions');
+      throw new Error('User not found or unauthorized');
     }
 
     // Get the user IDs from the request
     const { userIds } = await req.json();
-    if (!Array.isArray(userIds) || userIds.length === 0) {
-      throw new Error('Invalid or empty userIds array');
+    
+    if (!Array.isArray(userIds)) {
+      throw new Error('userIds must be an array');
     }
 
-    // Fetch user details for all provided IDs
-    const userDetails = [];
-    const errors = [];
-
-    for (const userId of userIds) {
-      try {
-        if (!userId || typeof userId !== 'string') {
-          throw new Error(`Invalid user ID: ${userId}`);
+    if (userIds.length === 0) {
+      return new Response(
+        JSON.stringify({ users: [] }),
+        {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+          },
+          status: 200,
         }
-
-        const { data: userData, error: userError } = await supabase.auth.admin
-          .getUserById(userId);
-
-        if (userError) {
-          throw userError;
-        }
-
-        if (!userData?.user) {
-          throw new Error(`No user found for ID: ${userId}`);
-        }
-
-        userDetails.push({
-          id: userData.user.id,
-          email: userData.user.email,
-          name: userData.user.user_metadata?.full_name || null,
-        });
-      } catch (error) {
-        console.error(`Error fetching user ${userId}:`, error);
-        errors.push({ userId, error: error.message });
-      }
+      );
     }
 
-    if (userDetails.length === 0) {
-      throw new Error('Failed to fetch any user details');
+    // Validate userIds format
+    const validUserIds = userIds.every(id => 
+      typeof id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+    );
+
+    if (!validUserIds) {
+      throw new Error('Invalid user ID format detected');
     }
+
+    // Fetch user details from the profiles table
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, email, full_name')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error('Database error:', profilesError);
+      throw new Error(`Failed to fetch profiles: ${profilesError.message}`);
+    }
+
+    // Transform profiles to match the expected format
+    const userDetails = (profiles || []).map(profile => ({
+      id: profile.id,
+      email: profile.email,
+      name: profile.full_name || profile.email?.split('@')[0] || 'Unknown User',
+    }));
+
+    // Track any IDs that weren't found
+    const foundIds = new Set(profiles?.map(p => p.id) || []);
+    const notFoundIds = userIds.filter(id => !foundIds.has(id));
 
     return new Response(
       JSON.stringify({ 
         users: userDetails,
-        errors: errors.length > 0 ? errors : undefined
+        notFound: notFoundIds.length > 0 ? notFoundIds : undefined
       }),
       {
         headers: {
@@ -132,14 +125,15 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         error: error.message,
-        details: error.stack
+        type: error.name,
       }),
       {
         headers: {
           ...corsHeaders,
           'Content-Type': 'application/json',
         },
-        status: error.message.includes('Unauthorized') ? 403 : 400,
+        status: error.message.includes('Authentication failed') ? 401 : 
+                error.message.includes('unauthorized') ? 403 : 400,
       }
     );
   }
