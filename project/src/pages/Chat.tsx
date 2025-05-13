@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { ArrowLeft, Send, Image, Paperclip, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Send, Image, Paperclip, ChevronDown, Loader2 } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -36,27 +36,71 @@ const Chat: React.FC = () => {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
+  // Check authentication and initialize chat
   useEffect(() => {
-    loadCurrentUser();
-    subscribeToMessages();
+    const initializeChat = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user) {
+          navigate('/login', { state: { from: location.pathname } });
+          return;
+        }
 
-    // Handle scroll button visibility
-    const handleScroll = () => {
-      if (!chatContainerRef.current) return;
-      const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-      setShowScrollButton(scrollHeight - scrollTop - clientHeight > 100);
+        setCurrentUser(session.user);
+        setIsLoading(false);
+
+        // If we have a receiver from navigation state, select them
+        const state = location.state as any;
+        if (state?.receiverId) {
+          const userDetails = await fetchUserDetails([state.receiverId]);
+          if (userDetails.length > 0) {
+            setSelectedUser({
+              id: userDetails[0].id,
+              name: userDetails[0].name,
+              unread_count: 0
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error initializing chat:', err);
+        setError('Failed to initialize chat');
+        setIsLoading(false);
+      }
     };
 
-    chatContainerRef.current?.addEventListener('scroll', handleScroll);
-    return () => chatContainerRef.current?.removeEventListener('scroll', handleScroll);
+    initializeChat();
   }, []);
 
+  // Subscribe to new messages
   useEffect(() => {
-    if (currentUser) {
-      loadChatUsers();
-    }
+    if (!currentUser) return;
+
+    const channel = supabase
+      .channel('chat_messages')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `receiver_id=eq.${currentUser.id}`
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newMessage = payload.new as ChatMessage;
+            setMessages(prev => [...prev, newMessage]);
+            loadChatUsers(); // Refresh user list to update unread counts
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [currentUser]);
 
+  // Load initial messages when user is selected
   useEffect(() => {
     if (selectedUser) {
       loadMessages(selectedUser.id);
@@ -64,87 +108,42 @@ const Chat: React.FC = () => {
     }
   }, [selectedUser]);
 
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadCurrentUser = async () => {
-    try {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error) throw error;
-      
-      if (user) {
-        setCurrentUser(user);
-      } else {
-        navigate('/login');
-      }
-    } catch (err) {
-      console.error('Error loading current user:', err);
-      setError('Failed to load user data');
-    }
-  };
-
-  const subscribeToMessages = () => {
-    const subscription = supabase
-      .channel('chat_messages')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'chat_messages' },
-        () => {
-          if (selectedUser) {
-            loadMessages(selectedUser.id);
-          }
-          loadChatUsers();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  };
-
   const fetchUserDetails = async (userIds: string[]) => {
     try {
-      if (!userIds.length) return [];
-
-      const session = await supabase.auth.getSession();
-      const accessToken = session.data.session?.access_token;
-      
-      if (!accessToken) {
-        throw new Error('No access token available');
-      }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error('No access token');
 
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/get-user-details`,
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ userIds }),
         }
       );
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch user details');
-      }
-
+      if (!response.ok) throw new Error('Failed to fetch user details');
       const data = await response.json();
       return data.users || [];
-    } catch (error) {
-      console.error('Error fetching user details:', error);
-      setError('Failed to load user details');
+    } catch (err) {
+      console.error('Error fetching user details:', err);
       return [];
     }
   };
 
   const loadChatUsers = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
+    if (!currentUser) return;
 
+    try {
+      // Get all messages to/from current user
       const { data: messages, error: messagesError } = await supabase
         .from('chat_messages')
         .select('*')
@@ -153,47 +152,54 @@ const Chat: React.FC = () => {
 
       if (messagesError) throw messagesError;
 
+      // Get unique user IDs
       const userIds = new Set<string>();
       messages?.forEach(msg => {
         if (msg.sender_id !== currentUser.id) userIds.add(msg.sender_id);
         if (msg.receiver_id !== currentUser.id) userIds.add(msg.receiver_id);
       });
 
+      // Fetch user details
       const userDetails = await fetchUserDetails(Array.from(userIds));
-      
-      const users: ChatUser[] = userDetails.map(userData => {
+
+      // Create chat users with last message and unread count
+      const chatUsers = userDetails.map(userData => {
         const lastMessage = messages?.find(msg => 
           msg.sender_id === userData.id || msg.receiver_id === userData.id
         );
         const unreadCount = messages?.filter(msg => 
-          msg.sender_id === userData.id && msg.receiver_id === currentUser.id && !msg.read
+          msg.sender_id === userData.id && 
+          msg.receiver_id === currentUser.id && 
+          !msg.read
         ).length || 0;
 
         return {
           id: userData.id,
-          name: userData.name || userData.email,
+          name: userData.name,
           last_message: lastMessage?.content,
           last_message_time: lastMessage?.created_at,
           unread_count: unreadCount
         };
       });
 
-      setUsers(users);
+      setUsers(chatUsers);
     } catch (err) {
       console.error('Error loading chat users:', err);
       setError('Failed to load chat users');
-    } finally {
-      setIsLoading(false);
     }
   };
 
   const loadMessages = async (userId: string) => {
+    if (!currentUser) return;
+
     try {
-      setError(null);
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
-        .or(`and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`)
+        .or(
+          `and(sender_id.eq.${currentUser.id},receiver_id.eq.${userId}),` +
+          `and(sender_id.eq.${userId},receiver_id.eq.${currentUser.id})`
+        )
         .order('created_at', { ascending: true });
 
       if (error) throw error;
@@ -205,6 +211,8 @@ const Chat: React.FC = () => {
   };
 
   const markMessagesAsRead = async (userId: string) => {
+    if (!currentUser) return;
+
     try {
       const { error } = await supabase
         .from('chat_messages')
@@ -214,6 +222,7 @@ const Chat: React.FC = () => {
         .eq('read', false);
 
       if (error) throw error;
+      loadChatUsers(); // Refresh unread counts
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }
@@ -221,10 +230,9 @@ const Chat: React.FC = () => {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedUser) return;
+    if (!newMessage.trim() || !selectedUser || !currentUser) return;
 
     try {
-      setError(null);
       const { error } = await supabase
         .from('chat_messages')
         .insert([{
@@ -236,6 +244,7 @@ const Chat: React.FC = () => {
 
       if (error) throw error;
       setNewMessage('');
+      loadMessages(selectedUser.id);
     } catch (err) {
       console.error('Error sending message:', err);
       setError('Failed to send message');
@@ -259,6 +268,14 @@ const Chat: React.FC = () => {
       locale: id
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen bg-gray-100 flex flex-col">
